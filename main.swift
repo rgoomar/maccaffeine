@@ -27,6 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var toggleItem: NSMenuItem!
     private var infoItem: NSMenuItem!
     private var loginItem: NSMenuItem!
+    private let appsMenu = NSMenu()
+    private var watchedApp: NSRunningApplication?
     private var assertionIDs: [IOPMAssertionID] = []
     private var autoOffTimer: Timer?
     private var limitTimer: Timer?
@@ -47,6 +49,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         addDuration(to: menu, "Awake for 1 hour", 60 * 60)
         addDuration(to: menu, "Awake for 2 hours", 2 * 60 * 60)
         addDuration(to: menu, "Awake for 5 hours", 5 * 60 * 60)
+        appsMenu.delegate = self
+        menu.addItem(withTitle: "Awake while app runs", action: nil, keyEquivalent: "").submenu = appsMenu
         menu.addItem(.separator())
         loginItem = menu.addItem(withTitle: "Open at Login", action: #selector(toggleLoginItem), keyEquivalent: "")
         menu.addItem(withTitle: "About MacCaffeine", action: #selector(about), keyEquivalent: "")
@@ -57,6 +61,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NotificationCenter.default.addObserver(
             forName: ProcessInfo.thermalStateDidChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in self?.checkLimits() }
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let self, let watched = watchedApp,
+                  let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.processIdentifier == watched.processIdentifier else { return }
+            stop(reason: "\(watched.localizedName ?? "app") quit")
+        }
     }
 
     @objc private func about() {
@@ -80,10 +93,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuWillOpen(_ menu: NSMenu) {
+        if menu === appsMenu { return rebuildAppsMenu() }
         toggleItem.state = active ? .on : .off
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         if active, let end = endDate {
             infoItem.title = "Awake until " + DateFormatter.localizedString(from: end, dateStyle: .none, timeStyle: .short)
+        } else if active, let app = watchedApp {
+            infoItem.title = "Awake while \(app.localizedName ?? "app") runs"
         } else if active {
             infoItem.title = "Awake until you turn it off"
         } else if let reason = lastStopReason {
@@ -97,11 +113,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let seconds = sender.representedObject as? TimeInterval else { return }
         start()
         guard active else { return }
+        watchedApp = nil
         autoOffTimer?.invalidate()
         endDate = Date(timeIntervalSinceNow: seconds)
         autoOffTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
             self?.stop(reason: "timer ended")
         }
+    }
+
+    /// Lists running apps with a Dock icon. The App Sandbox hides other processes (CLI tools),
+    /// so only apps are offered.
+    private func rebuildAppsMenu() {
+        appsMenu.removeAllItems()
+        let apps = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular && $0 != .current }
+            .sorted { ($0.localizedName ?? "").localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
+        for app in apps {
+            let item = NSMenuItem(title: app.localizedName ?? "Unknown", action: #selector(activateWhileRunning(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = app
+            item.image = app.icon?.copy() as? NSImage
+            item.image?.size = NSSize(width: 16, height: 16)
+            item.state = app.processIdentifier == watchedApp?.processIdentifier ? .on : .off
+            appsMenu.addItem(item)
+        }
+    }
+
+    @objc private func activateWhileRunning(_ sender: NSMenuItem) {
+        guard let app = sender.representedObject as? NSRunningApplication, !app.isTerminated else { return }
+        start()
+        guard active else { return }
+        autoOffTimer?.invalidate()
+        autoOffTimer = nil
+        endDate = nil
+        watchedApp = app
     }
 
     @objc private func toggleLoginItem() {
@@ -152,6 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         limitTimer?.invalidate()
         limitTimer = nil
         endDate = nil
+        watchedApp = nil
         lastStopReason = reason
         updateIcon()
     }
