@@ -1,0 +1,25 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="100" y1="100" x2="924" y2="924" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1b1207"/>
+      <stop offset="0.55" stop-color="#2c1c0d"/>
+      <stop offset="1" stop-color="#3b2410"/>
+    </linearGradient>
+    <linearGradient id="cup" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe7c2"/>
+      <stop offset="1" stop-color="#e9b878"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <g transform="translate(512 540) scale(2.3) translate(-120 -31)">
+    <g stroke="#ffe7c2" stroke-width="7" stroke-linecap="round" opacity="0.6">
+      <path d="M70 -14 q18 -24 0 -48 q-18 -24 0 -48"/>
+      <path d="M110 -14 q18 -24 0 -48 q-18 -24 0 -48"/>
+    </g>
+    <path d="M20 20 h150 v70 a55 55 0 0 1 -55 55 h-40 a55 55 0 0 1 -55 -55 z" fill="url(#cup)"/>
+    <path d="M170 40 h22 a34 34 0 0 1 0 68 h-22" stroke="url(#cup)" stroke-width="16"/>
+    <ellipse cx="95" cy="22" rx="75" ry="15" fill="#3b2410"/>
+    <ellipse cx="95" cy="20" rx="75" ry="15" fill="#5a3417"/>
+    <rect x="20" y="158" width="160" height="14" rx="7" fill="url(#cup)"/>
+  </g>
+</svg>

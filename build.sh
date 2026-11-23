@@ -4,6 +4,9 @@ cd "$(dirname "$0")"
 
 APP="MacCaffeine.app"
 VERSION="${VERSION:-0.0.0-dev}"
+BUILD_NUMBER="${BUILD_NUMBER:-0}"
+# Ad-hoc ("-") for local builds; CI passes "Developer ID Application" for notarized releases.
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 BIN_DIR="$APP/Contents/MacOS"
 RES_DIR="$APP/Contents/Resources"
 
@@ -18,6 +21,7 @@ for arch in arm64 x86_64; do
 done
 lipo -create "$BIN_DIR"/MacCaffeine-* -output "$BIN_DIR/MacCaffeine"
 rm "$BIN_DIR"/MacCaffeine-*
+cp assets/AppIcon.icns "$RES_DIR/"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -27,17 +31,23 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key>            <string>MacCaffeine</string>
   <key>CFBundleDisplayName</key>     <string>MacCaffeine</string>
   <key>CFBundleIdentifier</key>      <string>io.github.rgoomar.maccaffeine</string>
-  <key>CFBundleVersion</key>         <string>$VERSION</string>
+  <key>CFBundleVersion</key>         <string>$BUILD_NUMBER</string>
   <key>CFBundleShortVersionString</key> <string>$VERSION</string>
   <key>CFBundlePackageType</key>     <string>APPL</string>
   <key>CFBundleExecutable</key>      <string>MacCaffeine</string>
+  <key>CFBundleIconFile</key>        <string>AppIcon</string>
+  <key>NSHumanReadableCopyright</key> <string>© 2026 Rishi Goomar. MIT License.</string>
+  <key>LSApplicationCategoryType</key> <string>public.app-category.utilities</string>
   <key>LSUIElement</key>            <true/>
   <key>LSMinimumSystemVersion</key>  <string>13.0</string>
 </dict>
 </plist>
 PLIST
 
-echo "Ad-hoc signing…"
-codesign --force --deep --sign - "$APP"
+# Hardened runtime + App Sandbox: required for notarization and the Mac App Store.
+SIGN_ARGS=(--force --options runtime --entitlements MacCaffeine.entitlements --sign "$SIGN_IDENTITY")
+[ "$SIGN_IDENTITY" = "-" ] || SIGN_ARGS+=(--timestamp)
+echo "Signing with: $SIGN_IDENTITY"
+codesign "${SIGN_ARGS[@]}" "$APP"
 
 echo "Built: $(pwd)/$APP"

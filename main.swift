@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         addDuration(to: menu, "Awake for 5 hours", 5 * 60 * 60)
         menu.addItem(.separator())
         loginItem = menu.addItem(withTitle: "Open at Login", action: #selector(toggleLoginItem), keyEquivalent: "")
+        menu.addItem(withTitle: "About MacCaffeine", action: #selector(about), keyEquivalent: "")
         menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q")
         statusItem.menu = menu
         updateIcon()
@@ -56,6 +57,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NotificationCenter.default.addObserver(
             forName: ProcessInfo.thermalStateDidChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in self?.checkLimits() }
+    }
+
+    @objc private func about() {
+        let repo = "https://github.com/rgoomar/maccaffeine"
+        let center = NSMutableParagraphStyle()
+        center.alignment = .center
+        let credits = NSAttributedString(string: "github.com/rgoomar/maccaffeine", attributes: [
+            .link: URL(string: repo)!,
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+            .paragraphStyle: center,
+        ])
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
     }
 
     private func addDuration(to menu: NSMenu, _ title: String, _ seconds: TimeInterval) {
