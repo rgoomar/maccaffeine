@@ -1,0 +1,7 @@
+# build output
+MacCaffeine.app/
+MacCaffeine.zip
+*.dSYM/
+
+# macOS cruft
+.DS_Store
