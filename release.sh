@@ -1,9 +1,9 @@
 #!/bin/bash
 # Publishes a release: build → Developer ID sign → notarize + staple the app → signed DMG →
 # notarize + staple the DMG → GitHub release → Homebrew cask update.
-# Needs in the login keychain:
-#   - the "Developer ID Application" certificate and private key
-#   - notary credentials: xcrun notarytool store-credentials maccaffeine-notary --key … --key-id … --issuer …
+# Needs a Developer ID Application certificate (and its private key) in the login keychain,
+# notary credentials stored with
+#   xcrun notarytool store-credentials maccaffeine-notary --key … --key-id … --issuer …
 # and `gh` signed in.
 # Usage: ./release.sh 1.2.0
 set -euo pipefail
@@ -11,7 +11,7 @@ cd "$(dirname "$0")"
 
 VERSION="${1:?usage: ./release.sh <version>}"
 TAG="v$VERSION"
-IDENTITY="Developer ID Application"
+IDENTITY="${SIGN_IDENTITY:-Developer ID Application}"
 NOTARY_PROFILE="maccaffeine-notary"
 BUNDLE_ID="io.github.rgoomar.maccaffeine"
 
