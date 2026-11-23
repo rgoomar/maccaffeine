@@ -22,6 +22,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         kIOPMAssertionTypePreventUserIdleSystemSleep as CFString,
         kIOPMAssertionTypePreventSystemSleep as CFString,
     ]
+    /// Always-running or updater apps that make no sense as "awake while this runs" targets.
+    private static let hiddenApps: Set<String> = [
+        "com.apple.finder",
+        "com.apple.AppStore",
+        "com.apple.systempreferences",
+        "com.microsoft.autoupdate2",
+    ]
 
     private var statusItem: NSStatusItem!
     private var toggleItem: NSMenuItem!
@@ -126,7 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func rebuildAppsMenu() {
         appsMenu.removeAllItems()
         let apps = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular && $0 != .current }
+            .filter { $0.activationPolicy == .regular && $0 != .current && !Self.hiddenApps.contains($0.bundleIdentifier ?? "") }
             .sorted { ($0.localizedName ?? "").localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
         for app in apps {
             let item = NSMenuItem(title: app.localizedName ?? "Unknown", action: #selector(activateWhileRunning(_:)), keyEquivalent: "")
