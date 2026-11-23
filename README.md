@@ -12,13 +12,15 @@ A tiny menu-bar app that keeps your Mac awake. One click. Filled cup = awake. â˜
 
 ## Install
 
-**[Download the latest MacCaffeine.dmg](https://github.com/rgoomar/maccaffeine/releases/latest/download/MacCaffeine.dmg)**, open it, and drag MacCaffeine to Applications. The app and the DMG are signed and notarized by Apple. All versions are on the [Releases](https://github.com/rgoomar/maccaffeine/releases) page.
+[Download the installer (dmg)](https://github.com/rgoomar/maccaffeine/releases/latest/download/MacCaffeine.dmg).
 
 Or install with Homebrew:
 
 ```bash
 brew install --cask rgoomar/tap/maccaffeine
 ```
+
+All versions are on the [Releases](https://github.com/rgoomar/maccaffeine/releases) page.
 
 ## Use
 
