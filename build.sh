@@ -5,8 +5,6 @@ cd "$(dirname "$0")"
 APP="MacCaffeine.app"
 VERSION="${VERSION:-0.0.0-dev}"
 BUILD_NUMBER="${BUILD_NUMBER:-0}"
-# Ad-hoc ("-") for local builds; CI passes "Developer ID Application" for notarized releases.
-SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 BIN_DIR="$APP/Contents/MacOS"
 RES_DIR="$APP/Contents/Resources"
 
@@ -44,10 +42,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Hardened runtime + App Sandbox: required for notarization and the Mac App Store.
-SIGN_ARGS=(--force --options runtime --entitlements MacCaffeine.entitlements --sign "$SIGN_IDENTITY")
-[ "$SIGN_IDENTITY" = "-" ] || SIGN_ARGS+=(--timestamp)
-echo "Signing with: $SIGN_IDENTITY"
-codesign "${SIGN_ARGS[@]}" "$APP"
+# Ad-hoc sign with hardened runtime + App Sandbox (required for notarization and the Mac App Store).
+# release.sh re-signs this with the Developer ID certificate through Xcode.
+codesign --force --options runtime --entitlements MacCaffeine.entitlements --sign - "$APP"
 
 echo "Built: $(pwd)/$APP"

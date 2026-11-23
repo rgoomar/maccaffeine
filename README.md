@@ -53,29 +53,24 @@ Local builds are ad-hoc signed. The app runs in the App Sandbox with the hardene
 
 ## Release
 
-Push a tag:
+Requirements:
+
+- Xcode, signed in to a paid Apple Developer team (Admin or Account Holder).
+- The GitHub CLI (`gh`), signed in.
+
+Commit and push `main`, then run:
 
 ```bash
-git tag v1.1.0 && git push origin v1.1.0
+./release.sh 1.1.0
 ```
 
-GitHub Actions then:
+The script does these steps:
 
-1. Builds a universal (Apple silicon + Intel) app and signs it with the Developer ID certificate.
-2. Notarizes and staples it.
-3. Attaches `MacCaffeine.zip` to the GitHub release.
-4. Updates the cask in [rgoomar/homebrew-tap](https://github.com/rgoomar/homebrew-tap).
-
-Repository secrets:
-
-| Secret | Value |
-|---|---|
-| `DEVELOPER_ID_P12_BASE64` | Developer ID Application certificate and private key (`.p12`), base64 |
-| `DEVELOPER_ID_P12_PASSWORD` | Password of the `.p12` |
-| `NOTARY_KEY_P8_BASE64` | App Store Connect API key (`.p8`), base64 |
-| `NOTARY_KEY_ID` | Key ID of the API key |
-| `NOTARY_ISSUER_ID` | Issuer ID of the API key |
-| `TAP_DEPLOY_KEY` | SSH private key with write access to `rgoomar/homebrew-tap` |
+1. Builds a universal (Apple silicon + Intel) app.
+2. Signs the app with the team's Developer ID certificate through Xcode.
+3. Notarizes and staples the app.
+4. Tags `v1.1.0` and attaches `MacCaffeine.zip` to the GitHub release.
+5. Updates the cask in [rgoomar/homebrew-tap](https://github.com/rgoomar/homebrew-tap).
 
 ## Credits
 
