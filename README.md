@@ -51,27 +51,6 @@ open MacCaffeine.app
 
 Local builds are ad-hoc signed. The app runs in the App Sandbox with the hardened runtime, as the Mac App Store requires.
 
-## Release
-
-Requirements:
-
-- Xcode, signed in to a paid Apple Developer team (Admin or Account Holder).
-- The GitHub CLI (`gh`), signed in.
-
-Commit and push `main`, then run:
-
-```bash
-./release.sh 1.1.0
-```
-
-The script does these steps:
-
-1. Builds a universal (Apple silicon + Intel) app.
-2. Signs the app with the team's Developer ID certificate through Xcode.
-3. Notarizes and staples the app.
-4. Tags `v1.1.0` and attaches `MacCaffeine.zip` to the GitHub release.
-5. Updates the cask in [rgoomar/homebrew-tap](https://github.com/rgoomar/homebrew-tap).
-
 ## Credits
 
 MacCaffeine started as a fork of [CaffeineOSS](https://github.com/Kuberwastaken/caffeineOSS) by Kuber Mehta. It now uses a different approach (no admin rights, no `pmset`), so it is a separate project.
