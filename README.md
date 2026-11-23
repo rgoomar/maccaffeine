@@ -16,7 +16,7 @@ A tiny menu-bar app that keeps your Mac awake. One click. Filled cup = awake. â˜
 brew install --cask rgoomar/tap/maccaffeine
 ```
 
-Or download `MacCaffeine.zip` from [Releases](https://github.com/rgoomar/maccaffeine/releases), unzip it, and move `MacCaffeine.app` to `/Applications`. The app is signed and notarized by Apple.
+Or download `MacCaffeine.dmg` from [Releases](https://github.com/rgoomar/maccaffeine/releases), open it, and drag MacCaffeine to Applications. The app and the DMG are signed and notarized by Apple.
 
 ## Use
 

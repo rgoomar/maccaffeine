@@ -1,83 +1,62 @@
 #!/bin/bash
-# Publishes a release: build → Developer ID sign + notarize (through your Xcode account) →
-# GitHub release → Homebrew cask update.
-# Needs: Xcode signed in to a paid Apple Developer team (Admin or Account Holder), and `gh` signed in.
-# Usage: ./release.sh 1.1.0
+# Publishes a release: build → Developer ID sign → notarize + staple the app → signed DMG →
+# notarize + staple the DMG → GitHub release → Homebrew cask update.
+# Needs in the login keychain:
+#   - the "Developer ID Application" certificate and private key
+#   - notary credentials: xcrun notarytool store-credentials maccaffeine-notary --key … --key-id … --issuer …
+# and `gh` signed in.
+# Usage: ./release.sh 1.2.0
 set -euo pipefail
 cd "$(dirname "$0")"
 
 VERSION="${1:?usage: ./release.sh <version>}"
 TAG="v$VERSION"
-TEAM_ID="${TEAM_ID:?set TEAM_ID to your Apple Developer team ID}"
+IDENTITY="Developer ID Application"
+NOTARY_PROFILE="maccaffeine-notary"
 BUNDLE_ID="io.github.rgoomar.maccaffeine"
 
 [ -z "$(git status --porcelain)" ] || { echo "Commit your changes first."; exit 1; }
 git fetch -q origin main
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "Push main first."; exit 1; }
 
-BUILD_NUMBER="$(git rev-list --count HEAD)"
-VERSION="$VERSION" BUILD_NUMBER="$BUILD_NUMBER" ./build.sh
-
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 
-# xcodebuild only exports archives, so wrap the built app in a minimal .xcarchive.
-ARCHIVE="$W/MacCaffeine.xcarchive"
-mkdir -p "$ARCHIVE/Products/Applications"
-cp -R MacCaffeine.app "$ARCHIVE/Products/Applications/"
-cat > "$ARCHIVE/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>ApplicationProperties</key>
-  <dict>
-    <key>ApplicationPath</key>            <string>Applications/MacCaffeine.app</string>
-    <key>CFBundleIdentifier</key>         <string>$BUNDLE_ID</string>
-    <key>CFBundleShortVersionString</key> <string>$VERSION</string>
-    <key>CFBundleVersion</key>            <string>$BUILD_NUMBER</string>
-  </dict>
-  <key>ArchiveVersion</key> <integer>2</integer>
-  <key>CreationDate</key>   <date>$(date -u +%Y-%m-%dT%H:%M:%SZ)</date>
-  <key>Name</key>           <string>MacCaffeine</string>
-  <key>SchemeName</key>     <string>MacCaffeine</string>
-</dict>
-</plist>
-PLIST
+notarize() {
+  xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" --wait --output-format json > "$W/notary.json" || true
+  if ! grep -Eq '"status" *: *"Accepted"' "$W/notary.json"; then
+    cat "$W/notary.json"
+    id="$(sed -nE 's/.*"id" *: *"([^"]*)".*/\1/p' "$W/notary.json")"
+    [ -z "$id" ] || xcrun notarytool log "$id" --keychain-profile "$NOTARY_PROFILE"
+    exit 1
+  fi
+}
 
-cat > "$W/ExportOptions.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>method</key>      <string>developer-id</string>
-  <key>signingStyle</key> <string>automatic</string>
-  <key>teamID</key>      <string>$TEAM_ID</string>
-  <key>destination</key> <string>upload</string>
-</dict>
-</plist>
-PLIST
+VERSION="$VERSION" BUILD_NUMBER="$(git rev-list --count HEAD)" SIGN_IDENTITY="$IDENTITY" ./build.sh
 
-echo "Signing and uploading for notarization…"
-xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportOptionsPlist "$W/ExportOptions.plist" \
-  -exportPath "$W/upload" -allowProvisioningUpdates -quiet
+echo "Notarizing the app…"
+ditto -c -k --keepParent MacCaffeine.app "$W/app.zip"
+notarize "$W/app.zip"
+xcrun stapler staple MacCaffeine.app
 
-echo "Waiting for notarization…"
-until xcodebuild -exportNotarizedApp -archivePath "$ARCHIVE" -exportPath "$W/final" >"$W/notary.log" 2>&1; do
-  grep -q "is processing" "$W/notary.log" || { cat "$W/notary.log"; exit 1; }
-  sleep 15
-done
+echo "Building the DMG…"
+mkdir "$W/dmg"
+cp -R MacCaffeine.app "$W/dmg/"
+ln -s /Applications "$W/dmg/Applications"
+DMG="$W/MacCaffeine.dmg"
+hdiutil create -quiet -volname MacCaffeine -srcfolder "$W/dmg" -format UDZO "$DMG"
+codesign --sign "$IDENTITY" --timestamp "$DMG"
 
-APP="$W/final/MacCaffeine.app"
-xcrun stapler validate "$APP"
-spctl --assess --type execute -vv "$APP"
-ditto -c -k --keepParent "$APP" "$W/MacCaffeine.zip"
-SHA256="$(shasum -a 256 "$W/MacCaffeine.zip" | cut -d' ' -f1)"
+echo "Notarizing the DMG…"
+notarize "$DMG"
+xcrun stapler staple "$DMG"
+spctl --assess --type open --context context:primary-signature -vv "$DMG"
+SHA256="$(shasum -a 256 "$DMG" | cut -d' ' -f1)"
 
 echo "Publishing ${TAG}…"
 git tag "$TAG"
 git push -q origin "$TAG"
-gh release create "$TAG" "$W/MacCaffeine.zip" --generate-notes
+gh release create "$TAG" "$DMG" --generate-notes
 
 echo "Updating Homebrew cask…"
 gh repo clone rgoomar/homebrew-tap "$W/tap" -- -q
@@ -87,7 +66,7 @@ cask "maccaffeine" do
   version "$VERSION"
   sha256 "$SHA256"
 
-  url "https://github.com/rgoomar/maccaffeine/releases/download/v#{version}/MacCaffeine.zip"
+  url "https://github.com/rgoomar/maccaffeine/releases/download/v#{version}/MacCaffeine.dmg"
   name "MacCaffeine"
   desc "Menu bar app that keeps your Mac awake"
   homepage "https://github.com/rgoomar/maccaffeine"
