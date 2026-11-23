@@ -10,6 +10,10 @@
 
 A tiny menu-bar app that keeps your Mac awake. One click. Filled cup = awake. ☕
 
+<p align="center">
+  <img src="assets/screenshot.png" alt="MacCaffeine menu" width="234">
+</p>
+
 ## Install
 
 [Download the installer (dmg)](https://github.com/rgoomar/maccaffeine/releases/latest/download/MacCaffeine.dmg).
