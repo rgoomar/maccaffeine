@@ -74,7 +74,7 @@ spctl --assess --type execute -vv "$APP"
 ditto -c -k --keepParent "$APP" "$W/MacCaffeine.zip"
 SHA256="$(shasum -a 256 "$W/MacCaffeine.zip" | cut -d' ' -f1)"
 
-echo "Publishing $TAG…"
+echo "Publishing ${TAG}…"
 git tag "$TAG"
 git push -q origin "$TAG"
 gh release create "$TAG" "$W/MacCaffeine.zip" --generate-notes
