@@ -71,7 +71,7 @@ cask "maccaffeine" do
   desc "Menu bar app that keeps your Mac awake"
   homepage "https://github.com/rgoomar/maccaffeine"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "MacCaffeine.app"
 
