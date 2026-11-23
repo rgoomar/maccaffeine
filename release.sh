@@ -6,8 +6,10 @@
 #   xcrun notarytool store-credentials maccaffeine-notary --key … --key-id … --issuer …
 # and `gh` signed in.
 # Usage: ./release.sh 1.2.0
+# Optional .env (not committed): SIGN_IDENTITY="Developer ID Application: Name (TEAMID)"
 set -euo pipefail
 cd "$(dirname "$0")"
+[ ! -f .env ] || source .env
 
 VERSION="${1:?usage: ./release.sh <version>}"
 TAG="v$VERSION"

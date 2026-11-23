@@ -5,3 +5,6 @@ MacCaffeine.zip
 
 # macOS cruft
 .DS_Store
+
+# local signing settings
+.env
